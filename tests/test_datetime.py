@@ -30,7 +30,7 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
     async def test_duration_01(self):
 
         duration_kwargs = [
-            dict(),
+            {},
             dict(microseconds=1),
             dict(microseconds=-1),
             dict(days=1),
@@ -41,15 +41,16 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
             dict(microseconds=-1, days=-1, hours=-1),
         ]
 
+
         # Fuzz it!
-        for _ in range(5000):
-            duration_kwargs.append(
-                dict(
-                    microseconds=random.randint(-1000000000, 1000000000),
-                    hours=random.randint(-50, 50),
-                    days=random.randint(-500, 500),
-                )
+        duration_kwargs.extend(
+            dict(
+                microseconds=random.randint(-1000000000, 1000000000),
+                hours=random.randint(-50, 50),
+                days=random.randint(-500, 500),
             )
+            for _ in range(5000)
+        )
 
         durs = [timedelta(**d) for d in duration_kwargs]
 
@@ -67,7 +68,7 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
             self.skipTest("feature not implemented")
 
         delta_kwargs = [
-            dict(),
+            {},
             dict(microseconds=1),
             dict(microseconds=-1),
             dict(days=1),
@@ -78,15 +79,16 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
             dict(microseconds=-1, days=-1, months=-1),
         ]
 
+
         # Fuzz it!
-        for _ in range(5000):
-            delta_kwargs.append(
-                dict(
-                    microseconds=random.randint(-1000000000, 1000000000),
-                    days=random.randint(-500, 500),
-                    months=random.randint(-50, 50)
-                )
+        delta_kwargs.extend(
+            dict(
+                microseconds=random.randint(-1000000000, 1000000000),
+                days=random.randint(-500, 500),
+                months=random.randint(-50, 50),
             )
+            for _ in range(5000)
+        )
 
         durs = [RelativeDuration(**d) for d in delta_kwargs]
 
@@ -131,7 +133,7 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
             self.skipTest("feature not implemented")
 
         delta_kwargs = [
-            dict(),
+            {},
             dict(days=1),
             dict(days=-1),
             dict(months=1),
@@ -140,14 +142,12 @@ class TestDatetimeTypes(tb.SyncQueryTestCase):
             dict(days=-1, months=-1),
         ]
 
+
         # Fuzz it!
-        for _ in range(5000):
-            delta_kwargs.append(
-                dict(
-                    days=random.randint(-500, 500),
-                    months=random.randint(-50, 50)
-                )
-            )
+        delta_kwargs.extend(
+            dict(days=random.randint(-500, 500), months=random.randint(-50, 50))
+            for _ in range(5000)
+        )
 
         durs = [DateDuration(**d) for d in delta_kwargs]
 

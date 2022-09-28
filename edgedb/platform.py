@@ -45,8 +45,4 @@ def search_config_dir(*suffix):
     fallback = functools.reduce(
         lambda p1, p2: p1 / p2, [old_config_dir(), *suffix]
     )
-    if fallback.exists():
-        return fallback
-
-    # None of the searched files exists, return the new path.
-    return rv
+    return fallback if fallback.exists() else rv

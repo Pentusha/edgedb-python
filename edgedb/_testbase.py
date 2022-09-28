@@ -122,11 +122,7 @@ def _start_cluster(*, cleanup_atexit=True):
         if sys.platform == 'win32':
             args = ['wsl', '-u', 'edgedb'] + args
 
-        if env.get('EDGEDB_DEBUG_SERVER'):
-            server_stdout = None
-        else:
-            server_stdout = subprocess.DEVNULL
-
+        server_stdout = None if env.get('EDGEDB_DEBUG_SERVER') else subprocess.DEVNULL
         p = subprocess.Popen(
             args,
             env=env,
@@ -231,19 +227,18 @@ class TestCaseMeta(type(unittest.TestCase)):
                 except edgedb.TransactionSerializationError:
                     if try_no == 3:
                         raise
-                    else:
-                        self.loop.run_until_complete(self.client.execute(
-                            'ROLLBACK;'
-                        ))
-                        try_no += 1
+                    self.loop.run_until_complete(self.client.execute(
+                        'ROLLBACK;'
+                    ))
+                    try_no += 1
                 else:
                     break
 
         return wrapper
 
     @classmethod
-    def add_method(mcls, methname, ns, meth):
-        ns[methname] = mcls.wrap(meth)
+    def add_method(cls, methname, ns, meth):
+        ns[methname] = cls.wrap(meth)
 
     def __new__(mcls, name, bases, ns):
         for methname, meth in mcls._iter_methods(bases, ns.copy()):
@@ -465,10 +460,8 @@ class DatabaseTestCase(ClusterTestCase, ConnectedTestCaseMixin):
         # modules, but always create the 'test' module.
         schema = ['\nmodule test {}']
         for name, val in cls.__dict__.items():
-            m = re.match(r'^SCHEMA(?:_(\w+))?', name)
-            if m:
-                module_name = (m.group(1) or 'test').lower().replace(
-                    '__', '.')
+            if m := re.match(r'^SCHEMA(?:_(\w+))?', name):
+                module_name = (m[1] or 'test').lower().replace('__', '.')
 
                 with open(val, 'r') as sf:
                     module = sf.read()
@@ -482,11 +475,7 @@ class DatabaseTestCase(ClusterTestCase, ConnectedTestCaseMixin):
         script += f'\nPOPULATE MIGRATION; \nCOMMIT MIGRATION;'
 
         if cls.SETUP:
-            if not isinstance(cls.SETUP, (list, tuple)):
-                scripts = [cls.SETUP]
-            else:
-                scripts = cls.SETUP
-
+            scripts = cls.SETUP if isinstance(cls.SETUP, (list, tuple)) else [cls.SETUP]
             for scr in scripts:
                 if '\n' not in scr and os.path.exists(scr):
                     with open(scr, 'rt') as f:
@@ -500,11 +489,7 @@ class DatabaseTestCase(ClusterTestCase, ConnectedTestCaseMixin):
 
     @classmethod
     def tearDownClass(cls):
-        script = ''
-
-        if cls.TEARDOWN:
-            script = cls.TEARDOWN.strip()
-
+        script = cls.TEARDOWN.strip() if cls.TEARDOWN else ''
         try:
             if script:
                 cls.loop.run_until_complete(

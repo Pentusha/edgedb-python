@@ -90,7 +90,7 @@ class TestRecordDesc(unittest.TestCase):
         o = f(1, 2, 3, 4)
 
         desc = private.get_object_descriptor(o)
-        self.assertEqual(set(dir(desc)), set(('id', 'lb', 'c', 'd')))
+        self.assertEqual(set(dir(desc)), {'id', 'lb', 'c', 'd'})
 
         self.assertTrue(desc.is_linkprop('lb'))
         self.assertFalse(desc.is_linkprop('id'))
@@ -168,9 +168,7 @@ class TestTuple(unittest.TestCase):
         self.assertEqual(str(t), '(1, [(...)])')
 
     def test_tuple_freelist_1(self):
-        lst = []
-        for _ in range(5000):
-            lst.append(edgedb.Tuple((1,)))
+        lst = [edgedb.Tuple((1,)) for _ in range(5000)]
         for t in lst:
             self.assertEqual(t[0], 1)
 
@@ -606,7 +604,7 @@ class TestObject(unittest.TestCase):
         self.assertNotEqual(link1, link2)
 
         self.assertEqual(list(linkset), [link1, link2])
-        self.assertEqual([link for link in linkset], [link1, link2])
+        self.assertEqual(list(linkset), [link1, link2])
 
         self.assertNotEqual(link1, link2)
 

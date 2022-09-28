@@ -11,8 +11,8 @@ TEST_CUUID = c_UUID(TEST_UUID.bytes)
 ubytes = uuid.uuid4().bytes
 ustr = str(std_UUID(bytes=ubytes))
 
-print(str(std_UUID(bytes=ubytes)))
-print(str(c_UUID(ubytes)))
+print(std_UUID(bytes=ubytes))
+print(c_UUID(ubytes))
 
 N = 1_000_000
 

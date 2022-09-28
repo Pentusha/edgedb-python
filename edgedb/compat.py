@@ -47,9 +47,8 @@ if sys.version_info < (3, 7):
         except (asyncio.CancelledError, asyncio.TimeoutError):
             if fut.done():
                 return fut.result()
-            else:
-                await _cancel_and_wait(fut)
-                raise
+            await _cancel_and_wait(fut)
+            raise
 
 else:
     wait_for = asyncio.wait_for

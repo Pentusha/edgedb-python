@@ -227,8 +227,7 @@ class TestBlockingClient(tb.SyncQueryTestCase):
         def iterate():
             for tx in client.transaction():
                 with tx:
-                    for record in tx.query("SELECT {1, 2, 3}"):
-                        yield record
+                    yield from tx.query("SELECT {1, 2, 3}")
 
         class MyException(Exception):
             pass
@@ -249,8 +248,7 @@ class TestBlockingClient(tb.SyncQueryTestCase):
         def iterate():
             for tx in client.transaction():
                 with tx:
-                    for record in tx.query("SELECT {1, 2, 3}"):
-                        yield record
+                    yield from tx.query("SELECT {1, 2, 3}")
 
         class MyException(Exception):
             pass
@@ -271,8 +269,7 @@ class TestBlockingClient(tb.SyncQueryTestCase):
         client = self.create_client(max_concurrency=1)
 
         def iterate(tx):
-            for record in tx.query("SELECT {1, 2, 3}"):
-                yield record
+            yield from tx.query("SELECT {1, 2, 3}")
 
         class MyException(Exception):
             pass

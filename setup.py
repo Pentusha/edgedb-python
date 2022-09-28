@@ -75,21 +75,26 @@ CFLAGS = ['-O2']
 LDFLAGS = []
 SYSTEM = sys.platform
 
-if SYSTEM != 'win32':
+if SYSTEM == 'darwin':
+    CFLAGS.extend(
+        [
+            '-std=gnu99',
+            '-fsigned-char',
+            '-Wall',
+            '-Wsign-compare',
+            '-Wconversion',
+            '-Wno-nullability-completeness',
+        ]
+    )
+
+elif SYSTEM != 'win32':
     CFLAGS.extend(['-std=gnu99', '-fsigned-char', '-Wall',
                    '-Wsign-compare', '-Wconversion'])
-
-if SYSTEM == 'darwin':
-    # Lots of warnings from the standard library on macOS 10.14
-    CFLAGS.extend(['-Wno-nullability-completeness'])
 
 _ROOT = pathlib.Path(__file__).parent
 
 
-with open(str(_ROOT / 'README.rst')) as f:
-    readme = f.read()
-
-
+readme = pathlib.Path(str(_ROOT / 'README.rst')).read_text()
 with open(str(_ROOT / 'edgedb' / '_version.py')) as f:
     for line in f:
         if line.startswith('__version__ ='):
@@ -112,12 +117,7 @@ if (_ROOT / '.git').is_dir() and 'dev' in VERSION:
 
         git = subprocess.run(['git', 'rev-parse', 'HEAD'], env=env,
                              cwd=str(_ROOT), stdout=subprocess.PIPE)
-        if git.returncode == 0:
-            commitish = git.stdout.strip().decode('ascii')
-        else:
-            commitish = 'unknown'
-
-        return commitish
+        return git.stdout.strip().decode('ascii') if git.returncode == 0 else 'unknown'
 
     VERSION += '+' + git_commitish()[:7]
 
@@ -128,11 +128,9 @@ class VersionMixin:
         # Replace edgedb.__version__ with the actual version
         # of the distribution (possibly inferred from git).
 
-        with open(str(filename)) as f:
-            content = f.read()
-
+        content = pathlib.Path(str(filename)).read_text()
         version_re = r"(.*__version__\s*=\s*)'[^']+'(.*)"
-        repl = r"\1'{}'\2".format(self.distribution.metadata.version)
+        repl = f"\1'{self.distribution.metadata.version}'\2"
         content = re.sub(version_re, repl, content)
 
         with open(str(filename), 'w') as f:
@@ -203,15 +201,12 @@ class build_ext(distutils_build_ext.build_ext):
             for i, sfile in enumerate(extension.sources):
                 if sfile.endswith('.pyx'):
                     prefix, ext = os.path.splitext(sfile)
-                    cfile = prefix + '.c'
+                    cfile = f'{prefix}.c'
 
                     if os.path.exists(cfile) and not self.cython_always:
                         extension.sources[i] = cfile
                     else:
-                        if os.path.exists(cfile):
-                            cfiles[cfile] = os.path.getmtime(cfile)
-                        else:
-                            cfiles[cfile] = 0
+                        cfiles[cfile] = os.path.getmtime(cfile) if os.path.exists(cfile) else 0
                         need_cythonize = True
 
         if need_cythonize:
@@ -225,15 +220,16 @@ class build_ext(distutils_build_ext.build_ext):
                 import Cython
             except ImportError:
                 raise RuntimeError(
-                    'please install {} to compile edgedb from source'.format(
-                        CYTHON_DEPENDENCY))
+                    f'please install {CYTHON_DEPENDENCY} to compile edgedb from source'
+                )
+
 
             cython_dep = pkg_resources.Requirement.parse(CYTHON_DEPENDENCY)
             if Cython.__version__ not in cython_dep:
                 raise RuntimeError(
-                    'edgedb requires {}, got Cython=={}'.format(
-                        CYTHON_DEPENDENCY, Cython.__version__
-                    ))
+                    f'edgedb requires {CYTHON_DEPENDENCY}, got Cython=={Cython.__version__}'
+                )
+
 
             from Cython.Build import cythonize
 
@@ -272,10 +268,7 @@ if (not (_ROOT / 'edgedb' / 'protocol' / 'protocol.c').exists() or
     setup_requires.append(CYTHON_DEPENDENCY)
 
 
-with open(str(_ROOT / 'README.rst')) as f:
-    readme = f.read()
-
-
+readme = pathlib.Path(str(_ROOT / 'README.rst')).read_text()
 setuptools.setup(
     name='edgedb',
     version=VERSION,
