@@ -35,7 +35,7 @@ _PROHIBITED = (
 def saslprep(data: str, prohibit_unassigned_code_points=True):
     """An implementation of RFC4013 SASLprep."""
 
-    if data == '':
+    if not data:
         return data
 
     if prohibit_unassigned_code_points:

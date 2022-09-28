@@ -73,11 +73,7 @@ class TestConUtils(unittest.TestCase):
 
     @contextlib.contextmanager
     def environ(self, **kwargs):
-        old_vals = {}
-        for key in kwargs:
-            if key in os.environ:
-                old_vals[key] = os.environ[key]
-
+        old_vals = {key: os.environ[key] for key in kwargs if key in os.environ}
         for key, val in kwargs.items():
             if val is None:
                 if key in os.environ:
@@ -201,10 +197,8 @@ class TestConUtils(unittest.TestCase):
                             return mock.mock_open(
                                 read_data=files.get(str(filepath))
                             )()
-                        raise FileNotFoundError(
-                            f"[Errno 2] No such file or directory: " +
-                            f"'{filepath}'"
-                        )
+                        raise FileNotFoundError(f"[Errno 2] No such file or directory: '{filepath}'")
+
                     es.enter_context(mock.patch('builtins.open', mocked_open))
 
             if expected_error:
@@ -303,18 +297,23 @@ class TestConUtils(unittest.TestCase):
                 testcases = json.load(f)
         except FileNotFoundError as err:
             raise FileNotFoundError(
-                f'Failed to read "connection_testcases.json": {err}.\n' +
-                f'Is the "shared-client-testcases" submodule initialised? ' +
-                f'Try running "git submodule update --init".'
+                (
+                    (
+                        f'Failed to read "connection_testcases.json": {err}.\n'
+                        + 'Is the "shared-client-testcases" submodule initialised? '
+                    )
+                    + 'Try running "git submodule update --init".'
+                )
             )
+
 
         for i, testcase in enumerate(testcases):
             with self.subTest(i=i):
-                wait_until_available = \
-                    testcase.get('result', {}).get('waitUntilAvailable')
-                if wait_until_available:
+                if wait_until_available := testcase.get('result', {}).get(
+                    'waitUntilAvailable'
+                ):
                     testcase['result']['waitUntilAvailable'] = \
-                        con_utils._validate_wait_until_available(
+                            con_utils._validate_wait_until_available(
                             wait_until_available)
                 platform = testcase.get('platform')
                 if testcase.get('fs') and (

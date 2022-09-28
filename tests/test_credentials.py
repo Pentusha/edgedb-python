@@ -34,9 +34,8 @@ class _MockExists:
     def __call__(self, *args, **kwargs):
         if self.called:
             return True
-        else:
-            self.called = True
-            return False
+        self.called = True
+        return False
 
 
 class TestCredentials(unittest.TestCase):

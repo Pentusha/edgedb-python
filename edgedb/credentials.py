@@ -25,7 +25,7 @@ class Credentials(RequiredCredentials, total=False):
 
 
 def get_credentials_path(instance_name: str) -> pathlib.Path:
-    return platform.search_config_dir("credentials", instance_name + ".json")
+    return platform.search_config_dir("credentials", f"{instance_name}.json")
 
 
 def read_credentials(path: os.PathLike) -> Credentials:
@@ -86,8 +86,7 @@ def validate_credentials(data: dict) -> Credentials:
         if not isinstance(cert_data, str):
             raise ValueError("`tls_cert_data` must be a string")
         if ca is not None and ca != cert_data:
-            raise ValueError(
-                f"tls_ca and tls_cert_data are both set and disagree")
+            raise ValueError("tls_ca and tls_cert_data are both set and disagree")
         result['tls_ca'] = cert_data
 
     verify = data.get('tls_verify_hostname')

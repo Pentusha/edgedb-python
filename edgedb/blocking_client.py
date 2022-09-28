@@ -56,10 +56,7 @@ class BlockingIOConnection(base_client.BaseConnection):
                         raise TimeoutError
 
                     # Upgrade to TLS
-                    if self._params.ssl_ctx.check_hostname:
-                        server_hostname = addr[0]
-                    else:
-                        server_hostname = None
+                    server_hostname = addr[0] if self._params.ssl_ctx.check_hostname else None
                     sock.settimeout(time_left)
                     try:
                         sock = self._params.ssl_ctx.wrap_socket(
@@ -290,10 +287,7 @@ class Client(base_client.BaseClient, abstract.Executor):
         try:
             coro.send(None)
         except StopIteration as ex:
-            if ex.args:
-                result = ex.args[0]
-            else:
-                result = None
+            result = ex.args[0] if ex.args else None
         finally:
             coro.close()
         return result

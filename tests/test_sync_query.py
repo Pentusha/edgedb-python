@@ -114,7 +114,7 @@ class TestSyncQuery(tb.SyncQueryTestCase):
 
     def test_sync_exec_error_recover_05(self):
         with self.assertRaises(edgedb.DivisionByZeroError):
-            self.client.execute(f'select 1 / 0')
+            self.client.execute('select 1 / 0')
         self.assertEqual(
             self.client.query('SELECT "HELLO"'),
             ["HELLO"])

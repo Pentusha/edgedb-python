@@ -160,31 +160,30 @@ def parse_client_first_message(resp: bytes):
         cb = True
     elif cb_attr == b'n':
         cb = False
-    elif cb_attr[0:1] == b'p':
+    elif cb_attr[:1] == b'p':
         _, _, cb = cb_attr.partition(b'=')
         if not cb:
             raise ValueError('malformed SCRAM message')
     else:
         raise ValueError('malformed SCRAM message')
 
-    authzid_attr = attrs[1]
-    if authzid_attr:
-        if authzid_attr[0:1] != b'a':
+    if authzid_attr := attrs[1]:
+        if authzid_attr[:1] != b'a':
             raise ValueError('malformed SCRAM message')
         _, _, authzid = authzid_attr.partition(b'=')
     else:
         authzid = None
 
     user_attr = attrs[2]
-    if user_attr[0:1] == b'm':
+    if user_attr[:1] == b'm':
         raise ValueError('unsupported SCRAM extensions in message')
-    elif user_attr[0:1] != b'n':
+    elif user_attr[:1] != b'n':
         raise ValueError('malformed SCRAM message')
 
     _, _, user = user_attr.partition(b'=')
 
     nonce_attr = attrs[3]
-    if nonce_attr[0:1] != b'r':
+    if nonce_attr[:1] != b'r':
         raise ValueError('malformed SCRAM message')
 
     _, _, nonce_bin = nonce_attr.partition(b'=')
@@ -229,13 +228,13 @@ def parse_client_final_message(
     attrs = msg.split(b',')
 
     cb_attr = attrs[0]
-    if cb_attr[0:1] != b'c':
+    if cb_attr[:1] != b'c':
         raise ValueError('malformed SCRAM message')
 
     _, _, cb_data = cb_attr.partition(b'=')
 
     nonce_attr = attrs[1]
-    if nonce_attr[0:1] != b'r':
+    if nonce_attr[:1] != b'r':
         raise ValueError('malformed SCRAM message')
 
     _, _, nonce_bin = nonce_attr.partition(b'=')
@@ -250,7 +249,7 @@ def parse_client_final_message(
     proof = None
 
     for attr in attrs[2:]:
-        if attr[0:1] == b'p':
+        if attr[:1] == b'p':
             _, _, proof = attr.partition(b'=')
             proof_attr_len = len(attr)
             proof = base64.b64decode(proof)
@@ -329,7 +328,7 @@ def parse_server_first_message(msg: bytes):
     attrs = msg.split(b',')
 
     nonce_attr = attrs[0]
-    if nonce_attr[0:1] != b'r':
+    if nonce_attr[:1] != b'r':
         raise ValueError('malformed SCRAM message')
 
     _, _, nonce_bin = nonce_attr.partition(b'=')
@@ -338,14 +337,14 @@ def parse_server_first_message(msg: bytes):
         raise ValueError('malformed SCRAM message')
 
     salt_attr = attrs[1]
-    if salt_attr[0:1] != b's':
+    if salt_attr[:1] != b's':
         raise ValueError('malformed SCRAM message')
 
     _, _, salt_b64 = salt_attr.partition(b'=')
     salt = base64.b64decode(salt_b64)
 
     iter_attr = attrs[2]
-    if iter_attr[0:1] != b'i':
+    if iter_attr[:1] != b'i':
         raise ValueError('malformed SCRAM message')
 
     _, _, iterations = iter_attr.partition(b'=')
@@ -363,13 +362,11 @@ def parse_server_final_message(msg: bytes):
     attrs = msg.split(b',')
 
     nonce_attr = attrs[0]
-    if nonce_attr[0:1] != b'v':
+    if nonce_attr[:1] != b'v':
         raise ValueError('malformed SCRAM message')
 
     _, _, signature_b64 = nonce_attr.partition(b'=')
-    signature = base64.b64decode(signature_b64)
-
-    return signature
+    return base64.b64decode(signature_b64)
 
 
 def verify_password(password: bytes, verifier: str) -> bool:

@@ -133,10 +133,7 @@ class BaseConnection(metaclass=abc.ABCMeta):
 
     async def connect(self, *, single_attempt=False):
         start = time.monotonic()
-        if single_attempt:
-            max_time = 0
-        else:
-            max_time = start + self._config.wait_until_available
+        max_time = 0 if single_attempt else start + self._config.wait_until_available
         iteration = 1
 
         while True:
@@ -464,7 +461,7 @@ class BasePoolImpl(abc.ABC):
             )
 
         self._user_max_concurrency = max_concurrency
-        self._max_concurrency = max_concurrency if max_concurrency else 1
+        self._max_concurrency = max_concurrency or 1
 
         self._holders = []
         self._queue = None
@@ -518,19 +515,12 @@ class BasePoolImpl(abc.ABC):
 
                 self._holders.append(ch)
                 self._queue.put_nowait(ch)
-        elif resize_diff < 0:
-            # TODO: shrink the pool
-            pass
 
     def get_max_concurrency(self):
         return self._max_concurrency
 
     def get_free_size(self):
-        if self._queue is None:
-            # Queue has not been initialized yet
-            return self._max_concurrency
-
-        return self._queue.qsize()
+        return self._max_concurrency if self._queue is None else self._queue.qsize()
 
     def set_connect_args(self, dsn=None, **connect_kwargs):
         r"""Set the new connection arguments for this pool.
@@ -575,9 +565,9 @@ class BasePoolImpl(abc.ABC):
         self._working_params = connect_config
 
         if self._user_max_concurrency is None:
-            suggested_concurrency = con.get_settings().get(
-                'suggested_pool_concurrency')
-            if suggested_concurrency:
+            if suggested_concurrency := con.get_settings().get(
+                'suggested_pool_concurrency'
+            ):
                 self._max_concurrency = suggested_concurrency
                 self._resize_holder_pool()
         return con

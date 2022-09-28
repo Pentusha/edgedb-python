@@ -27,11 +27,7 @@ import traceback
 class TaskGroup:
 
     def __init__(self, *, name=None):
-        if name is None:
-            self._name = f'tg-{_name_counter()}'
-        else:
-            self._name = str(name)
-
+        self._name = f'tg-{_name_counter()}' if name is None else str(name)
         self._entered = False
         self._exiting = False
         self._aborting = False
@@ -216,9 +212,12 @@ class TaskGroup:
         self._unfinished_tasks -= 1
         assert self._unfinished_tasks >= 0
 
-        if self._exiting and not self._unfinished_tasks:
-            if not self._on_completed_fut.done():
-                self._on_completed_fut.set_result(True)
+        if (
+            self._exiting
+            and not self._unfinished_tasks
+            and not self._on_completed_fut.done()
+        ):
+            self._on_completed_fut.set_result(True)
 
         if task.cancelled():
             return
@@ -270,7 +269,7 @@ class MultiError(Exception):
 
     def __init__(self, msg, *args, errors=()):
         if errors:
-            types = set(type(e).__name__ for e in errors)
+            types = {type(e).__name__ for e in errors}
             msg = f'{msg}; {len(errors)} sub errors: ({", ".join(types)})'
             for er in errors:
                 msg += f'\n + {type(er).__name__}: {er}'

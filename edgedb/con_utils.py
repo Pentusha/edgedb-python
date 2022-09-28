@@ -86,8 +86,9 @@ def _validate_port_spec(hosts, port):
         # match that of the host list.
         if len(port) != len(hosts):
             raise errors.InterfaceError(
-                'could not match {} port numbers to {} hosts'.format(
-                    len(port), len(hosts)))
+                f'could not match {len(port)} port numbers to {len(hosts)} hosts'
+            )
+
     else:
         port = [port for _ in range(len(hosts))]
 
@@ -95,18 +96,12 @@ def _validate_port_spec(hosts, port):
 
 
 def _parse_hostlist(hostlist, port):
-    if ',' in hostlist:
-        # A comma-separated list of host addresses.
-        hostspecs = hostlist.split(',')
-    else:
-        hostspecs = [hostlist]
-
+    hostspecs = hostlist.split(',') if ',' in hostlist else [hostlist]
     hosts = []
     hostlist_ports = []
 
     if not port:
-        portspec = os.environ.get('EDGEDB_PORT')
-        if portspec:
+        if portspec := os.environ.get('EDGEDB_PORT'):
             if ',' in portspec:
                 default_port = [int(p) for p in portspec.split(',')]
             else:
@@ -144,7 +139,7 @@ def _hash_path(path):
 
 def _stash_path(path):
     base_name = os.path.basename(path)
-    dir_name = base_name + '-' + _hash_path(path)
+    dir_name = f'{base_name}-{_hash_path(path)}'
     return platform.search_config_dir('projects', dir_name)
 
 
@@ -186,9 +181,9 @@ class ResolvedConnectConfig:
     server_settings = {}
 
     def _set_param(self, param, value, source, validator=None):
-        param_name = '_' + param
+        param_name = f'_{param}'
         if getattr(self, param_name) is None:
-            setattr(self, param_name + '_source', source)
+            setattr(self, f'{param_name}_source', source)
             if value is not None:
                 setattr(
                     self,
@@ -239,18 +234,15 @@ class ResolvedConnectConfig:
 
     @property
     def address(self):
-        return (
-            self._host if self._host else 'localhost',
-            self._port if self._port else 5656
-        )
+        return self._host or 'localhost', self._port or 5656
 
     @property
     def database(self):
-        return self._database if self._database else 'edgedb'
+        return self._database or 'edgedb'
 
     @property
     def user(self):
-        return self._user if self._user else 'edgedb'
+        return self._user or 'edgedb'
 
     @property
     def password(self):
@@ -283,10 +275,7 @@ class ResolvedConnectConfig:
         if tls_security != 'default':
             return tls_security
 
-        if self._tls_ca_data is not None:
-            return "no_host_verification"
-
-        return "strict"
+        return "no_host_verification" if self._tls_ca_data is not None else "strict"
 
     _ssl_ctx = None
 
@@ -372,10 +361,9 @@ def _validate_user(user):
 def _pop_iso_unit(rgex: re.Pattern, string: str) -> typing.Tuple[float, str]:
     s = string
     total = 0
-    match = rgex.search(string)
-    if match:
-        total += float(match.group(1))
-        s = s.replace(match.group(0), "", 1)
+    if match := rgex.search(s):
+        total += float(match[1])
+        s = s.replace(match[0], "", 1)
 
     return (total, s)
 
@@ -385,8 +373,7 @@ def _parse_iso_duration(string: str) -> typing.Union[float, int]:
         raise ValueError(f"invalid duration {string!r}")
 
     time = string[2:]
-    match = ISO_UNITLESS_HOURS_RE.search(time)
-    if match:
+    if match := ISO_UNITLESS_HOURS_RE.search(time):
         hours = float(match.group(0))
         return 3600 * hours
 
@@ -413,8 +400,8 @@ def _pop_human_duration_unit(
         return 0, False, string
 
     number = 0
-    if match.group(1):
-        literal = _remove_white_space(match.group(1))
+    if match[1]:
+        literal = _remove_white_space(match[1])
         if literal.endswith('.'):
             return 0, False, string
 
@@ -422,11 +409,7 @@ def _pop_human_duration_unit(
             return 0, False, string
 
         number = float(literal)
-        string = string.replace(
-            match.group(0),
-            match.group(2) or match.group(3) or "",
-            1,
-        )
+        string = string.replace(match[0], match[2] or match[3] or "", 1)
 
     return number, True, string
 
@@ -641,24 +624,23 @@ def _parse_connect_dsn_and_args(
     if not has_compound_options:
         dir = find_edgedb_project_dir()
         stash_dir = _stash_path(dir)
-        if os.path.exists(stash_dir):
-            with open(os.path.join(stash_dir, 'instance-name'), 'rt') as f:
-                instance_name = f.read().strip()
-
-                _resolve_config_options(
-                    resolved_config,
-                    '',
-                    instance_name=(
-                        instance_name,
-                        f'project linked instance ("{instance_name}")'
-                    )
-                )
-        else:
+        if not os.path.exists(stash_dir):
             raise errors.ClientConnectionError(
-                f'Found `edgedb.toml` but the project is not initialized. '
-                f'Run `edgedb project init`.'
+                'Found `edgedb.toml` but the project is not initialized. Run `edgedb project init`.'
             )
 
+
+        with open(os.path.join(stash_dir, 'instance-name'), 'rt') as f:
+            instance_name = f.read().strip()
+
+            _resolve_config_options(
+                resolved_config,
+                '',
+                instance_name=(
+                    instance_name,
+                    f'project linked instance ("{instance_name}")'
+                )
+            )
     return resolved_config
 
 
@@ -698,22 +680,27 @@ def _parse_dsn_into_config(
             query[key] = val[-1]
 
     def handle_dsn_part(
-        paramName, value, currentValue, setter,
-        formatter=lambda val: val
-    ):
+            paramName, value, currentValue, setter,
+            formatter=lambda val: val
+        ):
         param_values = [
-            (value if value != '' else None),
+            value if value != '' else None,
             query.get(paramName),
-            query.get(paramName + '_env'),
-            query.get(paramName + '_file')
+            query.get(f'{paramName}_env'),
+            query.get(f'{paramName}_file'),
         ]
+
         if len([p for p in param_values if p is not None]) > 1:
             raise ValueError(
-                f'invalid DSN: more than one of ' +
-                f'{(paramName + ", ") if value else ""}' +
-                f'?{paramName}=, ?{paramName}_env=, ?{paramName}_file= ' +
-                f'was specified'
+                (
+                    (
+                        f'invalid DSN: more than one of {f"{paramName}, " if value else ""}'
+                        + f'?{paramName}=, ?{paramName}_env=, ?{paramName}_file= '
+                    )
+                    + 'was specified'
+                )
             )
+
 
         if currentValue is None:
             param = (
@@ -723,30 +710,28 @@ def _parse_dsn_into_config(
             paramSource = source
 
             if param is None:
-                env = query.get(paramName + '_env')
+                env = query.get(f'{paramName}_env')
                 if env is not None:
                     param = os.getenv(env)
                     if param is None:
                         raise ValueError(
                             f'{paramName}_env environment variable "{env}" ' +
                             f'doesn\'t exist')
-                    paramSource = paramSource + f' ({paramName}_env: {env})'
+                    paramSource = f'{paramSource} ({paramName}_env: {env})'
             if param is None:
-                filename = query.get(paramName + '_file')
+                filename = query.get(f'{paramName}_file')
                 if filename is not None:
                     with open(filename) as f:
                         param = f.read()
-                    paramSource = (
-                        paramSource + f' ({paramName}_file: {filename})'
-                    )
+                    paramSource = f'{paramSource} ({paramName}_file: {filename})'
 
             param = formatter(param) if param is not None else None
 
             setter(param, paramSource)
 
         query.pop(paramName, None)
-        query.pop(paramName + '_env', None)
-        query.pop(paramName + '_file', None)
+        query.pop(f'{paramName}_env', None)
+        query.pop(f'{paramName}_file', None)
 
     handle_dsn_part(
         'host', host, resolved_config._host, resolved_config.set_host
@@ -864,7 +849,7 @@ def _resolve_config_options(
                 try:
                     cred_data = json.loads(credentials[0])
                 except ValueError as e:
-                    raise RuntimeError(f"cannot read credentials") from e
+                    raise RuntimeError("cannot read credentials") from e
                 else:
                     creds = cred_utils.validate_credentials(cred_data)
                 source = "credentials"
@@ -912,9 +897,9 @@ def find_edgedb_project_dir():
             parent = os.path.dirname(dir)
             if parent == dir:
                 raise errors.ClientConnectionError(
-                    f'no `edgedb.toml` found and '
-                    f'no connection options specified'
+                    'no `edgedb.toml` found and no connection options specified'
                 )
+
             parent_dev = os.stat(parent).st_dev
             if parent_dev != dev:
                 raise errors.ClientConnectionError(
@@ -994,22 +979,11 @@ def check_alpn_protocol(ssl_obj):
 
 
 def render_client_no_connection_error(prefix, addr, attempts, duration):
-    if isinstance(addr, str):
-        msg = (
-            f'{prefix}'
-            f'\n\tAfter {attempts} attempts in {duration:.1f} sec'
-            f'\n\tIs the server running locally and accepting '
-            f'\n\tconnections on Unix domain socket {addr!r}?'
-        )
-    else:
-        msg = (
-            f'{prefix}'
-            f'\n\tAfter {attempts} attempts in {duration:.1f} sec'
-            f'\n\tIs the server running on host {addr[0]!r} '
-            f'and accepting '
-            f'\n\tTCP/IP connections on port {addr[1]}?'
-        )
-    return msg
+    return (
+        f'{prefix}\n\tAfter {attempts} attempts in {duration:.1f} sec\n\tIs the server running locally and accepting \n\tconnections on Unix domain socket {addr!r}?'
+        if isinstance(addr, str)
+        else f'{prefix}\n\tAfter {attempts} attempts in {duration:.1f} sec\n\tIs the server running on host {addr[0]!r} and accepting \n\tTCP/IP connections on port {addr[1]}?'
+    )
 
 
 def _extract_errno(s):
@@ -1020,20 +994,13 @@ def _extract_errno(s):
     ``OSError("Multiple exceptions:...")`` error without ``.errno`` attribute
     set. There are multiple ones in the text, so we extract all of them.
     """
-    result = []
-    for match in ERRNO_RE.finditer(s):
-        result.append(int(match.group(1)))
-    if result:
+    if result := [int(match.group(1)) for match in ERRNO_RE.finditer(s)]:
         return result
 
 
 def wrap_error(e):
     message = str(e)
-    if e.errno is None:
-        errnos = _extract_errno(message)
-    else:
-        errnos = [e.errno]
-
+    errnos = _extract_errno(message) if e.errno is None else [e.errno]
     if errnos:
         is_temp = any((code in TEMPORARY_ERROR_CODES for code in errnos))
     else:

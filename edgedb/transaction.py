@@ -59,23 +59,26 @@ class BaseTransaction:
     def __check_state_base(self, opname):
         if self._state is TransactionState.COMMITTED:
             raise errors.InterfaceError(
-                'cannot {}; the transaction is already committed'.format(
-                    opname))
+                f'cannot {opname}; the transaction is already committed'
+            )
+
         if self._state is TransactionState.ROLLEDBACK:
             raise errors.InterfaceError(
-                'cannot {}; the transaction is already rolled back'.format(
-                    opname))
+                f'cannot {opname}; the transaction is already rolled back'
+            )
+
         if self._state is TransactionState.FAILED:
             raise errors.InterfaceError(
-                'cannot {}; the transaction is in error state'.format(
-                    opname))
+                f'cannot {opname}; the transaction is in error state'
+            )
 
     def __check_state(self, opname):
         if self._state is not TransactionState.STARTED:
             if self._state is TransactionState.NEW:
                 raise errors.InterfaceError(
-                    'cannot {}; the transaction is not yet started'.format(
-                        opname))
+                    f'cannot {opname}; the transaction is not yet started'
+                )
+
             self.__check_state_base(opname)
 
     def _make_start_query(self):
@@ -95,8 +98,7 @@ class BaseTransaction:
         return 'ROLLBACK;'
 
     def __repr__(self):
-        attrs = []
-        attrs.append('state:{}'.format(self._state.name.lower()))
+        attrs = [f'state:{self._state.name.lower()}']
         attrs.append(repr(self._options))
 
         if self.__class__.__module__.startswith('edgedb.'):
@@ -108,21 +110,22 @@ class BaseTransaction:
             mod, self.__class__.__name__, ' '.join(attrs), id(self))
 
     async def _ensure_transaction(self):
-        if not self.__started:
-            self.__started = True
-            query = self._make_start_query()
-            self._connection = await self._client._impl.acquire()
-            if self._connection.is_closed():
-                await self._connection.connect(
-                    single_attempt=self.__iteration != 0
-                )
-            try:
-                await self._privileged_execute(query)
-            except BaseException:
-                self._state = TransactionState.FAILED
-                raise
-            else:
-                self._state = TransactionState.STARTED
+        if self.__started:
+            return
+        self.__started = True
+        query = self._make_start_query()
+        self._connection = await self._client._impl.acquire()
+        if self._connection.is_closed():
+            await self._connection.connect(
+                single_attempt=self.__iteration != 0
+            )
+        try:
+            await self._privileged_execute(query)
+        except BaseException:
+            self._state = TransactionState.FAILED
+            raise
+        else:
+            self._state = TransactionState.STARTED
 
     async def _exit(self, extype, ex):
         if not self.__started:
@@ -146,29 +149,20 @@ class BaseTransaction:
             else:
                 self._state = state
         except errors.EdgeDBError as err:
-            if ex is None:
-                # On commit we don't know if commit is succeeded before the
-                # database have received it or after it have been done but
-                # network is dropped before we were able to receive a response.
-                # On a TransactionError, though, we know the we need
-                # to retry.
-                # TODO(tailhook) should other errors have retries?
-                if (
-                    isinstance(err, errors.TransactionError)
-                    and err.has_tag(errors.SHOULD_RETRY)
-                    and self.__retry._retry(err)
-                ):
-                    pass
-                else:
-                    raise err
-            # If we were going to rollback, look at original error
-            # to find out whether we want to retry, regardless of
-            # the rollback error.
-            # In this case we ignore rollback issue as original error is more
-            # important, e.g. in case `CancelledError` it's important
-            # to propagate it to cancel the whole task.
-            # NOTE: rollback error is always swallowed, should we use
-            # on_log_message for it?
+            if ex is None and (
+                not isinstance(err, errors.TransactionError)
+                or not err.has_tag(errors.SHOULD_RETRY)
+                or not self.__retry._retry(err)
+            ):
+                raise err
+                # If we were going to rollback, look at original error
+                # to find out whether we want to retry, regardless of
+                # the rollback error.
+                # In this case we ignore rollback issue as original error is more
+                # important, e.g. in case `CancelledError` it's important
+                # to propagate it to cancel the whole task.
+                # NOTE: rollback error is always swallowed, should we use
+                # on_log_message for it?
         finally:
             await self._client._impl.release(self._connection)
 

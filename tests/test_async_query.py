@@ -132,7 +132,7 @@ class TestAsyncQuery(tb.AsyncQueryTestCase):
 
     async def test_async_exec_error_recover_05(self):
         with self.assertRaises(edgedb.DivisionByZeroError):
-            await self.client.execute(f'select 1 / 0')
+            await self.client.execute('select 1 / 0')
         self.assertEqual(
             await self.client.query('SELECT "HELLO"'),
             ["HELLO"])
@@ -626,15 +626,17 @@ class TestAsyncQuery(tb.AsyncQueryTestCase):
         ]
 
         for _ in range(500):
-            num = ''
-            for _ in range(random.randint(1, 50)):
-                num += random.choice("0123456789")
+            num = ''.join(
+                random.choice("0123456789") for _ in range(random.randint(1, 50))
+            )
+
             testar.append(int(num))
 
         for _ in range(500):
-            num = ''
-            for _ in range(random.randint(1, 50)):
-                num += random.choice("0000000012")
+            num = ''.join(
+                random.choice("0000000012") for _ in range(random.randint(1, 50))
+            )
+
             testar.append(int(num))
 
         val = await self.client.query_single(

@@ -76,21 +76,23 @@ class Range:
         return not self.is_empty()
 
     def __eq__(self, other):
-        if not isinstance(other, Range):
-            return NotImplemented
-
         return (
-            self._lower,
-            self._upper,
-            self._inc_lower,
-            self._inc_upper,
-            self._empty
-        ) == (
-            other._lower,
-            other._upper,
-            other._inc_lower,
-            other._inc_upper,
-            self._empty,
+            (
+                self._lower,
+                self._upper,
+                self._inc_lower,
+                self._inc_upper,
+                self._empty,
+            )
+            == (
+                other._lower,
+                other._upper,
+                other._inc_lower,
+                other._inc_upper,
+                self._empty,
+            )
+            if isinstance(other, Range)
+            else NotImplemented
         )
 
     def __hash__(self) -> int:
@@ -106,16 +108,13 @@ class Range:
         if self._empty:
             desc = "empty"
         else:
-            lb = "(" if not self._inc_lower else "["
+            lb = "[" if self._inc_lower else "("
             if self._lower is not None:
                 lb += repr(self._lower)
 
-            if self._upper is not None:
-                ub = repr(self._upper)
-            else:
-                ub = ""
-
-            ub += ")" if self._inc_upper else "]"
+            ub = (repr(self._upper) if self._upper is not None else "") + (
+                ")" if self._inc_upper else "]"
+            )
 
             desc = f"{lb}, {ub}"
 

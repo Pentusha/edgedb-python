@@ -109,10 +109,7 @@ class EdgeDBError(Exception, metaclass=EdgeDBErrorMeta):
         return self._read_str_field(FIELD_HINT)
 
     def _read_str_field(self, key, default=None):
-        val = self._attrs.get(key)
-        if val:
-            return val.decode('utf-8')
-        return default
+        return val.decode('utf-8') if (val := self._attrs.get(key)) else default
 
     def get_code(self):
         return self._code
@@ -175,9 +172,7 @@ def _severity_name(severity):
         return 'WARNING'
     if severity <= EDGE_SEVERITY_ERROR:
         return 'ERROR'
-    if severity <= EDGE_SEVERITY_FATAL:
-        return 'FATAL'
-    return 'PANIC'
+    return 'FATAL' if severity <= EDGE_SEVERITY_FATAL else 'PANIC'
 
 
 FIELD_HINT = 0x_00_01

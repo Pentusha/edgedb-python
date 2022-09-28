@@ -36,10 +36,7 @@ class RetryOptions:
     def with_rule(self, condition, attempts=None, backoff=None):
         default = self._default
         overrides = self._overrides
-        if overrides is None:
-            overrides = {}
-        else:
-            overrides = overrides.copy()
+        overrides = {} if overrides is None else overrides.copy()
         overrides[condition] = _RetryRule(
             default.attempts if attempts is None else attempts,
             default.backoff if backoff is None else backoff,
@@ -58,9 +55,8 @@ class RetryOptions:
 
     def get_rule_for_exception(self, exception):
         default = self._default
-        overrides = self._overrides
         res = default
-        if overrides:
+        if overrides := self._overrides:
             if isinstance(exception, errors.TransactionConflictError):
                 res = overrides.get(RetryCondition.TransactionConflict, res)
             elif isinstance(exception, errors.ClientError):
@@ -88,16 +84,8 @@ class TransactionOptions:
 
     def start_transaction_query(self):
         isolation = str(self._isolation)
-        if self._readonly:
-            mode = 'READ ONLY'
-        else:
-            mode = 'READ WRITE'
-
-        if self._deferrable:
-            defer = 'DEFERRABLE'
-        else:
-            defer = 'NOT DEFERRABLE'
-
+        mode = 'READ ONLY' if self._readonly else 'READ WRITE'
+        defer = 'DEFERRABLE' if self._deferrable else 'NOT DEFERRABLE'
         return f'START TRANSACTION ISOLATION {isolation}, {mode}, {defer};'
 
     def __repr__(self):
@@ -150,9 +138,9 @@ class State:
     def with_module_aliases(self, *args, **aliases):
         if len(args) > 1:
             raise errors.InvalidArgumentError(
-                "with_module_aliases() takes from 0 to 1 positional arguments "
-                "but {} were given".format(len(args))
+                f"with_module_aliases() takes from 0 to 1 positional arguments but {len(args)} were given"
             )
+
         aliases_dict = args[0] if args else {}
         aliases_dict.update(aliases)
         new_aliases = self._aliases.copy()
@@ -167,9 +155,9 @@ class State:
     def with_config(self, *args, **config):
         if len(args) > 1:
             raise errors.InvalidArgumentError(
-                "with_config() takes from 0 to 1 positional arguments "
-                "but {} were given".format(len(args))
+                f"with_config() takes from 0 to 1 positional arguments but {len(args)} were given"
             )
+
         config_dict = args[0] if args else {}
         config_dict.update(config)
         new_config = self._config.copy()
@@ -195,9 +183,9 @@ class State:
     def with_globals(self, *args, **globals_):
         if len(args) > 1:
             raise errors.InvalidArgumentError(
-                "with_globals() takes from 0 to 1 positional arguments "
-                "but {} were given".format(len(args))
+                f"with_globals() takes from 0 to 1 positional arguments but {len(args)} were given"
             )
+
         new_globals = self._globals.copy()
         if args:
             for k, v in args[0].items():
