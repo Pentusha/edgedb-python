@@ -37,7 +37,7 @@ cdef class BaseArrayCodec(BaseCodec):
             Py_ssize_t objlen
             Py_ssize_t i
 
-        if not isinstance(self.sub_codec, (ScalarCodec, TupleCodec, RangeCodec)):
+        if not isinstance(self.sub_codec, (ScalarCodec, TupleCodec, RangeCodec, SetCodec)):
             raise TypeError(
                 'only arrays of scalars are supported (got type {!r})'.format(
                     type(self.sub_codec).__name__

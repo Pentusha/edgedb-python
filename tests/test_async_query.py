@@ -792,6 +792,13 @@ class TestAsyncQuery(tb.AsyncQueryTestCase):
         )
         self.assertEqual([edgedb.Range(1, 2)], result)
 
+    async def test_async_set_01(self):
+        result = await self.client.query_single(
+            "SELECT <int32>$0",
+            [edgedb.Set((1, 2))]
+        )
+        self.assertEqual([edgedb.Set((1, 2))], result)
+
     async def test_async_wait_cancel_01(self):
         underscored_lock = await self.client.query_single("""
             SELECT EXISTS(
